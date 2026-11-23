@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Global Supply Chain & Sales Dashboard</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+  <!-- ═══════════════════════════════════════════════
+       HEADER
+  ════════════════════════════════════════════════ -->
+  <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+    <div class="max-w-screen-2xl mx-auto px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg select-none">S</div>
+        <div>
+          <h1 class="text-lg font-bold text-gray-900 leading-tight">Global Supply Chain &amp; Sales Dashboard</h1>
+          <p class="text-xs text-gray-500">DataCo Supply Chain Dataset — 2,500 Sample Transactions</p>
+        </div>
+      </div>
+      <!-- Last updated badge -->
+      <div class="flex items-center gap-2 text-xs text-gray-500">
+        <span class="inline-block w-2 h-2 rounded-full bg-green-400"></span>
+        <span id="last-updated">Loading data…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════
+       FILTER BAR
+  ════════════════════════════════════════════════ -->
+  <nav class="bg-white border-b border-gray-200 shadow-sm">
+    <div class="max-w-screen-2xl mx-auto px-6 py-3 flex flex-wrap gap-3 items-center">
+      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Filter By:</span>
+
+      <!-- Region Filter -->
+      <div class="filter-group">
+        <label for="filter-region" class="filter-label">Region</label>
+        <select id="filter-region" class="filter-select">
+          <option value="All">All Regions</option>
+        </select>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="filter-group">
+        <label for="filter-category" class="filter-label">Category</label>
+        <select id="filter-category" class="filter-select">
+          <option value="All">All Categories</option>
+        </select>
+      </div>
+
+      <!-- Customer Type Filter -->
+      <div class="filter-group">
+        <label for="filter-customer" class="filter-label">Customer Type</label>
+        <select id="filter-customer" class="filter-select">
+          <option value="All">All Types</option>
+        </select>
+      </div>
+
+      <!-- Shipping Mode Filter -->
+      <div class="filter-group">
+        <label for="filter-shipping" class="filter-label">Shipping Mode</label>
+        <select id="filter-shipping" class="filter-select">
+          <option value="All">All Modes</option>
+        </select>
+      </div>
+
+      <!-- Reset Button -->
+      <button id="reset-filters" class="ml-auto px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-600 border border-gray-200 hover:border-red-200 transition-all duration-200">
+        ✕ Reset Filters
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════
+       ERROR BANNER (hidden by default)
+  ════════════════════════════════════════════════ -->
+  <div id="error-banner" class="hidden max-w-screen-2xl mx-auto px-6 mt-4">
+    <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+      <span class="text-red-500 text-xl">⚠️</span>
+      <div>
+        <p class="font-semibold text-red-700">Failed to load <code>data.json</code></p>
+        <p class="text-sm text-red-600 mt-1" id="error-detail">Please open this project using a local HTTP server (e.g., VS Code Live Server, or run <code>npx serve .</code>) instead of opening the HTML file directly — browsers block <code>fetch()</code> on <code>file://</code> URLs.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════════════ -->
+  <main class="max-w-screen-2xl mx-auto px-6 py-6 space-y-8">
+
+    <!-- ── KPI SUMMARY CARDS ── -->
+    <section id="kpi-section" aria-label="KPI Summary">
+      <h2 class="section-title">📊 Key Performance Indicators</h2>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-3">
+
+        <div class="kpi-card">
+          <p class="kpi-label">Total Revenue</p>
+          <p class="kpi-value text-blue-600" id="kpi-revenue">—</p>
+          <p class="kpi-sub" id="kpi-revenue-sub"></p>
+        </div>
+
+        <div class="kpi-card">
+          <p class="kpi-label">Total Profit</p>
+          <p class="kpi-value text-emerald-600" id="kpi-profit">—</p>
+          <p class="kpi-sub" id="kpi-profit-sub"></p>
+        </div>
+
+        <div class="kpi-card">
+          <p class="kpi-label">Total Transactions</p>
+          <p class="kpi-value text-violet-600" id="kpi-transactions">—</p>
+          <p class="kpi-sub" id="kpi-transactions-sub"></p>
+        </div>
+
+        <div class="kpi-card">
+          <p class="kpi-label">Total Qty Sold</p>
+          <p class="kpi-value text-orange-500" id="kpi-quantity">—</p>
+          <p class="kpi-sub" id="kpi-quantity-sub"></p>
+        </div>
+
+        <div class="kpi-card">
+          <p class="kpi-label">Avg Discount</p>
+          <p class="kpi-value text-pink-600" id="kpi-discount">—</p>
+          <p class="kpi-sub" id="kpi-discount-sub"></p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── SALES TREND ── -->
+    <section aria-label="Sales Trend">
+      <h2 class="section-title">📈 Monthly Sales Trend</h2>
+      <div class="chart-card">
+        <canvas id="chart-sales-trend" height="90"></canvas>
+      </div>
+    </section>
+
+    <!-- ── ROW: Region + Market ── -->
+    <section aria-label="Regional Performance" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div>
+        <h2 class="section-title">🌍 Revenue by Region (Top 10)</h2>
+        <div class="chart-card">
+          <canvas id="chart-region" height="260"></canvas>
+        </div>
+      </div>
+      <div>
+        <h2 class="section-title">🌐 Revenue by Global Market</h2>
+        <div class="chart-card chart-card--polar">
+          <canvas id="chart-market"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ROW: Category Revenue + Category Quantity ── -->
+    <section aria-label="Category Analysis" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div>
+        <h2 class="section-title">📦 Revenue by Product Category (Top 10)</h2>
+        <div class="chart-card">
+          <canvas id="chart-category-revenue" height="280"></canvas>
+        </div>
+      </div>
+      <div>
+        <h2 class="section-title">🔢 Quantity Sold by Category (Top 10)</h2>
+        <div class="chart-card">
+          <canvas id="chart-category-qty" height="280"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ROW: Customer Type + Payment Method + Shipping Mode ── -->
+    <section aria-label="Segments & Operations" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div>
+        <h2 class="section-title">👥 Customer Type Distribution</h2>
+        <div class="chart-card flex items-center justify-center">
+          <canvas id="chart-customer" height="220" width="220"></canvas>
+        </div>
+      </div>
+      <div>
+        <h2 class="section-title">💳 Payment Method Usage</h2>
+        <div class="chart-card flex items-center justify-center">
+          <canvas id="chart-payment" height="220" width="220"></canvas>
+        </div>
+      </div>
+      <div>
+        <h2 class="section-title">🚚 Shipping Mode Distribution</h2>
+        <div class="chart-card flex items-center justify-center">
+          <canvas id="chart-shipping" height="220" width="220"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DISCOUNT vs SALES SCATTER ── -->
+    <section aria-label="Discount vs Sales">
+      <h2 class="section-title">🎯 Discount Rate vs Sales (Scatter Plot)</h2>
+      <div class="chart-card">
+        <canvas id="chart-scatter" height="100"></canvas>
+      </div>
+    </section>
+
+    <!-- ── TOP 10 PRODUCTS TABLE ── -->
+    <section aria-label="Top Products">
+      <h2 class="section-title">🏆 Top 10 Highest Sales by Product</h2>
+      <div class="chart-card overflow-x-auto">
+        <table class="w-full text-sm" id="top-products-table">
+          <thead>
+            <tr class="border-b border-gray-200 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th class="pb-3 pr-4">#</th>
+              <th class="pb-3 pr-4">Product Name</th>
+              <th class="pb-3 pr-4">Region</th>
+              <th class="pb-3 pr-4">Market</th>
+              <th class="pb-3 text-right">Sales</th>
+            </tr>
+          </thead>
+          <tbody id="top-products-body" class="divide-y divide-gray-100">
+            <tr><td colspan="5" class="py-4 text-center text-gray-400">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       FOOTER
+  ════════════════════════════════════════════════ -->
+  <footer class="mt-12 py-6 border-t border-gray-200 bg-white text-center text-xs text-gray-400">
+    Global Supply Chain &amp; Sales Dashboard &mdash; DataCo Dataset &mdash; Built with Chart.js &amp; Tailwind CSS
+  </footer>
+
+  <!-- Main Script -->
+  <script src="script.js"></script>
+
+</body>
+</html>
